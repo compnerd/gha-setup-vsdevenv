@@ -3,14 +3,35 @@ const process = require('process')
 const path = require('path')
 const spawn = require('child_process').spawnSync
 
+/// Gets the inputs to this action, with default values filled in.
 function getInputs() {
+    // Default to the native processor as the host architecture
+    // vsdevcmd accepts both amd64 and x64
+    const hostArch = core.getInput('host_arch') || process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+    const arch = core.getInput('arch') || hostArch
+    const toolsetVersion = core.getInput('toolset_version') || null
+
+    const components = core.getInput('components').split(';').filter(s => s.length != 0)
+    if (!toolsetVersion) {
+        // Include the latest target architecture compiler toolset by default
+        if (inputs.arch === 'arm64') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+        }
+        else if (inputs.arch == 'arm') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
+        }
+        else {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+        }
+    }
+
     return {
-        "host_arch": core.getInput('host_arch') || null,
-        "arch": core.getInput('arch') || null,
-        "toolset_version": core.getInput('toolset_version') || null,
+        "host_arch": hostArch,
+        "arch": arch,
+        "toolset_version": toolsetVersion,
         "winsdk": core.getInput('winsdk') || null,
         "vswhere": core.getInput('vswhere') || null,
-        "components": core.getInput('components') || null,
+        "components": components,
         "verbose": Boolean(core.getInput('verbose'))
     }
 }
@@ -23,22 +44,8 @@ function findVSWhere(inputs) {
     return vswherePath
 }
 
-function findVSInstallDir(inputs, vswherePath) {
-    const components = inputs.components.split(';').filter(s => s.length != 0)
-    if (!inputs.toolsetVersion) {
-        // Include the target architecture compiler toolset by default
-        if (arch === 'arm64') {
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
-        }
-        else if (arch == 'arm') {
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
-        }
-        else {
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
-        }
-    }
-
-    const requiresArg = components
+function findVSInstallDir(vswherePath, inputs) {
+    const requiresArg = inputs.components
         .map(comp => ['-requires', comp])
         .reduce((arr, pair) => arr.concat(pair), [])
 
@@ -99,9 +106,9 @@ try {
         process.exit(0)
     }
 
-    const inputs = getInputs()
+    var inputs = getInputs()
 
-    const installPath = findVSInstallDir(inputs, findVSWhere())
+    const installPath = findVSInstallDir(findVSWhere(), inputs)
     core.setOutput('install_path', installPath)
 
     const vsDevCmdPath = path.win32.join(installPath, 'Common7', 'Tools', 'vsdevcmd.bat')
