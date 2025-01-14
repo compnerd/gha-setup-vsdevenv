@@ -17,11 +17,11 @@ Inputs
 ------
 
 - `vswhere`: Path to `vswhere.exe` (default system-installed copy).
-- `arch`: Build architecture (default `amd64`).
-- `host_arch`: Host architecture override.
+- `host_arch`: Host architecture override (defaults to the processor architecture).
+- `arch`: Build architecture (defaults to the value of host_arch).
 - `winsdk`: WinSDK version override.
 - `toolset_version`: Build toolset version override.
-- `components`: List of required VS components, semi-colon separated. (default `Microsoft.VisualStudio.Component.VC.Tools.x86.x64`)
+- `components`: List of required VS components, semi-colon separated. (includes the latest toolset for `arch` by default)
 - `verbose`: Display information about the installation that `vswhere` selects.
 
 Outputs

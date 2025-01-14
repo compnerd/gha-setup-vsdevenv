@@ -3,28 +3,42 @@ const process = require('process')
 const path = require('path')
 const spawn = require('child_process').spawnSync
 
-try {
-    // this job has nothing to do on non-Windows platforms
-    if (process.platform != 'win32') {
-        process.exit(0)
+function getInputs() {
+    return {
+        "host_arch": core.getInput('host_arch') || null,
+        "arch": core.getInput('arch') || null,
+        "toolset_version": core.getInput('toolset_version') || null,
+        "winsdk": core.getInput('winsdk') || null,
+        "vswhere": core.getInput('vswhere') || null,
+        "components": core.getInput('components') || null,
+        "verbose": Boolean(core.getInput('verbose'))
     }
+}
 
-    const arch = core.getInput('arch') || 'amd64'
-    const hostArch = core.getInput('host_arch') || ''
-    const toolsetVersion = core.getInput('toolset_version') || ''
-    const winsdk = core.getInput('winsdk') || ''
-    const vswhere = core.getInput('vswhere') || 'vswhere.exe'
-    const components = core.getInput('components') || 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
-    const verbose = core.getInput('verbose') || false
-
+function findVSWhere(inputs) {
+    const vswhere = inputs.vswhere || 'vswhere.exe'
     const vsInstallerPath = path.win32.join(process.env['ProgramFiles(x86)'], 'Microsoft Visual Studio', 'Installer')
     const vswherePath = path.win32.resolve(vsInstallerPath, vswhere)
-
     console.log(`vswhere: ${vswherePath}`)
+    return vswherePath
+}
+
+function findVSInstallDir(inputs, vswherePath) {
+    const components = inputs.components.split(';').filter(s => s.length != 0)
+    if (!inputs.toolsetVersion) {
+        // Include the target architecture compiler toolset by default
+        if (arch === 'arm64') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+        }
+        else if (arch == 'arm') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
+        }
+        else {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+        }
+    }
 
     const requiresArg = components
-        .split(';')
-        .filter(s => s.length != 0)
         .map(comp => ['-requires', comp])
         .reduce((arr, pair) => arr.concat(pair), [])
 
@@ -55,25 +69,51 @@ try {
 
     const installPath = installPathList[installPathList.length - 1]
     console.log(`install: ${installPath}`)
+    return installPath
+}
+
+function getVSDevCmdArgs(inputs) {
+    // Default to the native processor as the host architecture
+    // vsdevcmd accepts both amd64 and x64
+    const hostArch = inputs.host_arch || process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+
+    // Default to the host architecture as the target architecture
+    const arch = inputs.arch || hostArch
+
+    const args = [
+        `-host_arch=${hostArch}`,
+        `-arch=${arch}`
+    ]
+
+    if (inputs.toolsetVersion)
+        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
+    if (inputs.winsdk)
+        args.push(`-winsdk=${winsdk}`)
+
+    return args
+}
+
+try {
+    // this job has nothing to do on non-Windows platforms
+    if (process.platform != 'win32') {
+        process.exit(0)
+    }
+
+    const inputs = getInputs()
+
+    const installPath = findVSInstallDir(inputs, findVSWhere())
     core.setOutput('install_path', installPath)
 
     const vsDevCmdPath = path.win32.join(installPath, 'Common7', 'Tools', 'vsdevcmd.bat')
     console.log(`vsdevcmd: ${vsDevCmdPath}`)
 
-    const vsDevCmdArgs = [ vsDevCmdPath, `-arch=${arch}` ]
-    if (hostArch != '')
-        vsDevCmdArgs.push(`-host_arch=${hostArch}`)
-    if (toolsetVersion != '')
-        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
-    if (winsdk != '')
-        vsDevCmdArgs.push(`-winsdk=${winsdk}`)
-    
-    const cmdArgs = [ '/q', '/k'].concat(vsDevCmdArgs, ['&&', 'set'])
-
+    const vsDevCmdArgs = getVSDevCmdArgs(inputs)
+    const cmdArgs = [].concat(['/q', '/k', vsDevCmdPath], vsDevCmdArgs, ['&&', 'set'])
     console.log(`$ cmd ${cmdArgs.join(' ')}`)
 
     const cmdResult = spawn('cmd', cmdArgs, {encoding: 'utf8'})
     if (cmdResult.error) throw cmdResult.error
+
     const cmdOutput = cmdResult.output
         .filter(s => !!s)
         .map(s => s.split('\n'))
