@@ -14,10 +14,10 @@ function getInputs() {
     const components = core.getInput('components').split(';').filter(s => s.length != 0)
     if (!toolsetVersion) {
         // Include the latest target architecture compiler toolset by default
-        if (inputs.arch === 'arm64') {
+        if (arch === 'arm64') {
             components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
         }
-        else if (inputs.arch == 'arm') {
+        else if (arch == 'arm') {
             components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
         }
         else {
