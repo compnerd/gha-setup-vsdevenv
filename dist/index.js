@@ -2865,7 +2865,7 @@ function getInputs() {
         "winsdk": core.getInput('winsdk') || null,
         "vswhere": core.getInput('vswhere') || null,
         "components": components,
-        "verbose": Boolean(core.getInput('verbose'))
+        "verbose": String(core.getInput('verbose')) === "true"
     }
 }
 
