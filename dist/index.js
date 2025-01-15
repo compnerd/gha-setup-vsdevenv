@@ -2836,28 +2836,49 @@ const index_process = __nccwpck_require__(932)
 const path = __nccwpck_require__(928)
 const spawn = (__nccwpck_require__(317).spawnSync)
 
-try {
-    // this job has nothing to do on non-Windows platforms
-    if (index_process.platform != 'win32') {
-        index_process.exit(0)
+/// Gets the inputs to this action, with default values filled in.
+function getInputs() {
+    // Default to the native processor as the host architecture
+    // vsdevcmd accepts both amd64 and x64
+    const hostArch = core.getInput('host_arch') || index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+    const arch = core.getInput('arch') || hostArch
+    const toolsetVersion = core.getInput('toolset_version') || null
+
+    const components = core.getInput('components').split(';').filter(s => s.length != 0)
+    if (!toolsetVersion) {
+        // Include the latest target architecture compiler toolset by default
+        if (inputs.arch === 'arm64') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+        }
+        else if (inputs.arch == 'arm') {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
+        }
+        else {
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+        }
     }
 
-    const arch = core.getInput('arch') || 'amd64'
-    const hostArch = core.getInput('host_arch') || ''
-    const toolsetVersion = core.getInput('toolset_version') || ''
-    const winsdk = core.getInput('winsdk') || ''
-    const vswhere = core.getInput('vswhere') || 'vswhere.exe'
-    const components = core.getInput('components') || 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
-    const verbose = core.getInput('verbose') || false
+    return {
+        "host_arch": hostArch,
+        "arch": arch,
+        "toolset_version": toolsetVersion,
+        "winsdk": core.getInput('winsdk') || null,
+        "vswhere": core.getInput('vswhere') || null,
+        "components": components,
+        "verbose": Boolean(core.getInput('verbose'))
+    }
+}
 
+function findVSWhere(inputs) {
+    const vswhere = inputs.vswhere || 'vswhere.exe'
     const vsInstallerPath = path.win32.join(index_process.env['ProgramFiles(x86)'], 'Microsoft Visual Studio', 'Installer')
     const vswherePath = path.win32.resolve(vsInstallerPath, vswhere)
-
     console.log(`vswhere: ${vswherePath}`)
+    return vswherePath
+}
 
-    const requiresArg = components
-        .split(';')
-        .filter(s => s.length != 0)
+function findVSInstallDir(vswherePath, inputs) {
+    const requiresArg = inputs.components
         .map(comp => ['-requires', comp])
         .reduce((arr, pair) => arr.concat(pair), [])
 
@@ -2888,21 +2909,46 @@ try {
 
     const installPath = installPathList[installPathList.length - 1]
     console.log(`install: ${installPath}`)
+    return installPath
+}
+
+function getVSDevCmdArgs(inputs) {
+    // Default to the native processor as the host architecture
+    // vsdevcmd accepts both amd64 and x64
+    const hostArch = inputs.host_arch || index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+
+    // Default to the host architecture as the target architecture
+    const arch = inputs.arch || hostArch
+
+    const args = [
+        `-host_arch=${hostArch}`,
+        `-arch=${arch}`
+    ]
+
+    if (inputs.toolsetVersion)
+        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
+    if (inputs.winsdk)
+        args.push(`-winsdk=${winsdk}`)
+
+    return args
+}
+
+try {
+    // this job has nothing to do on non-Windows platforms
+    if (index_process.platform != 'win32') {
+        index_process.exit(0)
+    }
+
+    var inputs = getInputs()
+
+    const installPath = findVSInstallDir(findVSWhere(), inputs)
     core.setOutput('install_path', installPath)
 
     const vsDevCmdPath = path.win32.join(installPath, 'Common7', 'Tools', 'vsdevcmd.bat')
     console.log(`vsdevcmd: ${vsDevCmdPath}`)
 
-    const vsDevCmdArgs = [ vsDevCmdPath, `-arch=${arch}` ]
-    if (hostArch != '')
-        vsDevCmdArgs.push(`-host_arch=${hostArch}`)
-    if (toolsetVersion != '')
-        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
-    if (winsdk != '')
-        vsDevCmdArgs.push(`-winsdk=${winsdk}`)
-    
-    const cmdArgs = [ '/q', '/k'].concat(vsDevCmdArgs, ['&&', 'set'])
-
+    const vsDevCmdArgs = getVSDevCmdArgs(inputs)
+    const cmdArgs = [].concat(['/q', '/k', vsDevCmdPath], vsDevCmdArgs, ['&&', 'set'])
     console.log(`$ cmd ${cmdArgs.join(' ')}`)
 
     const cmdResult = spawn('cmd', cmdArgs, {encoding: 'utf8'})
