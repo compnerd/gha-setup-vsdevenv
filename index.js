@@ -63,7 +63,7 @@ function findVSInstallDir(inputs) {
     const vswhereResult = spawn(vswherePath, vswhereArgs, {encoding: 'utf8'})
     if (vswhereResult.error) throw vswhereResult.error
 
-    if (verbose) {
+    if (inputs.verbose) {
       const args = [
         '-nologo',
         '-latest',
