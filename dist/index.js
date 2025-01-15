@@ -2953,6 +2953,7 @@ try {
 
     const cmdResult = spawn('cmd', cmdArgs, {encoding: 'utf8'})
     if (cmdResult.error) throw cmdResult.error
+
     const cmdOutput = cmdResult.output
         .filter(s => !!s)
         .map(s => s.split('\n'))
