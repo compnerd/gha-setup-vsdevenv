@@ -44,7 +44,9 @@ function findVSWhere(inputs) {
     return vswherePath
 }
 
-function findVSInstallDir(vswherePath, inputs) {
+function findVSInstallDir(inputs) {
+    const vswherePath = findVSWhere(inputs)
+
     const requiresArg = inputs.components
         .map(comp => ['-requires', comp])
         .reduce((arr, pair) => arr.concat(pair), [])
@@ -108,7 +110,7 @@ try {
 
     var inputs = getInputs()
 
-    const installPath = findVSInstallDir(findVSWhere(), inputs)
+    const installPath = findVSInstallDir(inputs)
     core.setOutput('install_path', installPath)
 
     const vsDevCmdPath = path.win32.join(installPath, 'Common7', 'Tools', 'vsdevcmd.bat')
