@@ -32,6 +32,7 @@ function getInputs() {
         "winsdk": core.getInput('winsdk') || null,
         "vswhere": core.getInput('vswhere') || null,
         "components": components,
+        // Action inputs are stringly-typed, and Boolean("false") === true, so prefer:
         "verbose": String(core.getInput('verbose')) === "true"
     }
 }
@@ -60,17 +61,17 @@ function findVSInstallDir(inputs) {
 
     console.log(`$ ${vswherePath} ${vswhereArgs.join(' ')}`)
 
-    const vswhereResult = spawn(vswherePath, vswhereArgs, {encoding: 'utf8'})
+    const vswhereResult = spawn(vswherePath, vswhereArgs, { encoding: 'utf8' })
     if (vswhereResult.error) throw vswhereResult.error
 
     if (inputs.verbose) {
-      const args = [
-        '-nologo',
-        '-latest',
-        '-products', '*',
-      ].concat(requiresArg)
-      const details = spawn(vswherePath, args, { encoding: 'utf8' })
-      console.log(details.output.join(''))
+        const args = [
+            '-nologo',
+            '-latest',
+            '-products', '*',
+        ].concat(requiresArg)
+        const details = spawn(vswherePath, args, { encoding: 'utf8' })
+        console.log(details.output.join(''))
     }
 
     const installPathList = vswhereResult.output.filter(s => !!s).map(s => s.trim())
@@ -117,10 +118,10 @@ try {
     console.log(`vsdevcmd: ${vsDevCmdPath}`)
 
     const vsDevCmdArgs = getVSDevCmdArgs(inputs)
-    const cmdArgs = [].concat(['/q', '/k', vsDevCmdPath], vsDevCmdArgs, ['&&', 'set'])
+    const cmdArgs = ['/q', '/k', vsDevCmdPath, ...vsDevCmdArgs, '&&', 'set']
     console.log(`$ cmd ${cmdArgs.join(' ')}`)
 
-    const cmdResult = spawn('cmd', cmdArgs, {encoding: 'utf8'})
+    const cmdResult = spawn('cmd', cmdArgs, { encoding: 'utf8' })
     if (cmdResult.error) throw cmdResult.error
 
     const cmdOutput = cmdResult.output
@@ -136,9 +137,9 @@ try {
     const newEnvVars = completeEnv
         .filter(([key, _]) => !process.env[key])
     const newPath = completeEnv
-                        .filter(([key, _]) => key == 'Path')
-                        .map(([_, value]) => value)
-                        .join(';');
+        .filter(([key, _]) => key == 'Path')
+        .map(([_, value]) => value)
+        .join(';');
 
     for (const [key, value] of newEnvVars) {
         core.exportVariable(key, value)
