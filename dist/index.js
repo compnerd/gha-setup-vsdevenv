@@ -2849,6 +2849,8 @@ function getInputs() {
         // Include the latest target architecture compiler toolset by default
         if (arch === 'arm64')
             components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+        else if (arch === 'arm64ec')
+            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
         else if (arch == 'arm')
             components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
         else
