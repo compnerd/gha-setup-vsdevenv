@@ -8,10 +8,10 @@ inputs:
     description: 'Name or path to vswhere.exr'
     default: 'vswhere.exe'
   arch:
-    description: 'Target build architecture'
-    default: 'amd64'
+    description: "Determines the 'arch' argument to vcvarsall (x86, amd64/x64, arm, arm64, or arm64ec). Defaults to the value of host_arch."
+    default: ''
   host_arch:
-    description: 'Host architecture (x86, x86_amd64, or amd64)'
+    description: "Determines the 'host_arch' parameter to vcvarsall (x86, amd64/x64, or arm64). Defaults to the current processor architecture."
     default: ''
   winsdk:
     description: 'Overrides the default WinSDK version'
@@ -21,7 +21,7 @@ inputs:
     default: ''
   components:
     description: 'List of components required in the selected VS installation (semi-colon separated)'
-    default: 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+    default: ''
   verbose:
     description: 'Display additional information about the VS Installation'
     default: false
