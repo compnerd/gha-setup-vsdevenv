@@ -8,10 +8,10 @@ inputs:
     description: 'Name or path to vswhere.exr'
     default: 'vswhere.exe'
   arch:
-    description: 'Determines the 'arch' argument to vcvarsall (x86, amd64/x64, arm, arm64, or arm64ec). Defaults to the value of host_arch.'
+    description: 'Determines the \'arch\' argument to vcvarsall (x86, amd64/x64, arm, arm64, or arm64ec). Defaults to the value of host_arch.'
     default: ''
   host_arch:
-    description: 'Determines the 'host_arch' parameter to vcvarsall (x86, amd64/x64, or arm64). Defaults to the current processor architecture.'
+    description: 'Determines the \'host_arch\' parameter to vcvarsall (x86, amd64/x64, or arm64). Defaults to the current processor architecture.'
     default: ''
   winsdk:
     description: 'Overrides the default WinSDK version'
