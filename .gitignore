@@ -1,1 +1,5 @@
-node_modules
+# Lines that start with '#' are comments.
+
+# build output
+/node_modules/
+/dist/
