@@ -1,0 +1,33 @@
+name: 'Setup VS Dev Environment'
+description: 'Sets VS dev environment variables and PATH via devenv (like vcvarsall) for using msbuild, cl.exe, link.exe, etc.'
+branding:
+  icon: 'code'
+  color: 'purple'
+inputs:
+  vswhere:
+    description: 'Name or path to vswhere.exe'
+    default: 'vswhere.exe'
+  arch:
+    description: "Determines the 'arch' argument to vcvarsall ('x86', 'amd64', 'x64', 'arm', 'arm64', or 'arm64ec'). Defaults to the value of host_arch."
+    default: ''
+  host_arch:
+    description: "Determines the 'host_arch' parameter to vcvarsall ('x86', 'amd64', 'x64', or 'arm64'). Defaults to the current processor architecture."
+    default: ''
+  winsdk:
+    description: 'Overrides the default WinSDK version'
+    default: ''
+  toolset_version:
+    description: 'Overrides the default toolset version'
+    default: ''
+  components:
+    description: 'List of components required in the selected VS installation (semi-colon separated)'
+    default: ''
+  verbose:
+    description: 'Display additional information about the VS Installation'
+    default: false
+outputs:
+  install_path:
+    description: 'VS installation path'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

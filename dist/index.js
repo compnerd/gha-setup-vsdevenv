@@ -2838,149 +2838,159 @@ const spawn = (__nccwpck_require__(317).spawnSync)
 
 /// Gets the inputs to this action, with default values filled in.
 function getInputs() {
-    // Default to the native processor as the host architecture
-    // vsdevcmd accepts both amd64 and x64
-    const hostArch = core.getInput('host_arch') || index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
-    const arch = core.getInput('arch') || hostArch
-    const toolsetVersion = core.getInput('toolset_version') || null
+  // Default to the native processor as the host architecture
+  // vsdevcmd accepts both amd64 and x64
+  const hostArch =
+    core.getInput('host_arch') ||
+    index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+  const arch = core.getInput('arch') || hostArch
+  const toolsetVersion = core.getInput('toolset_version') || null
 
-    const components = core.getInput('components').split(';').filter(s => s.length != 0)
-    if (!toolsetVersion) {
-        // Include the latest target architecture compiler toolset by default
-        if (arch === 'arm64')
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
-        else if (arch === 'arm64ec')
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
-        else if (arch == 'arm')
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
-        else
-            components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
-    }
+  const components = core
+    .getInput('components')
+    .split(';')
+    .filter(s => s.length != 0)
+  if (!toolsetVersion) {
+    // Include the latest target architecture compiler toolset by default
+    if (arch === 'arm64')
+      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+    else if (arch === 'arm64ec')
+      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
+    else if (arch == 'arm')
+      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
+    else components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+  }
 
-    return {
-        "host_arch": hostArch,
-        "arch": arch,
-        "toolset_version": toolsetVersion,
-        "winsdk": core.getInput('winsdk') || null,
-        "vswhere": core.getInput('vswhere') || null,
-        "components": components,
-        // Action inputs are stringly-typed, and Boolean("false") === true, so prefer:
-        "verbose": String(core.getInput('verbose')) === "true"
-    }
+  return {
+    host_arch: hostArch,
+    arch: arch,
+    toolset_version: toolsetVersion,
+    winsdk: core.getInput('winsdk') || null,
+    vswhere: core.getInput('vswhere') || null,
+    components: components,
+    // Action inputs are stringly-typed, and Boolean("false") === true, so prefer:
+    verbose: String(core.getInput('verbose')) === 'true',
+  }
 }
 
 function findVSWhere(inputs) {
-    const vswhere = inputs.vswhere || 'vswhere.exe'
-    const vsInstallerPath = path.win32.join(index_process.env['ProgramFiles(x86)'], 'Microsoft Visual Studio', 'Installer')
-    const vswherePath = path.win32.resolve(vsInstallerPath, vswhere)
-    console.log(`vswhere: ${vswherePath}`)
-    return vswherePath
+  const vswhere = inputs.vswhere || 'vswhere.exe'
+  const vsInstallerPath = path.win32.join(
+    index_process.env['ProgramFiles(x86)'],
+    'Microsoft Visual Studio',
+    'Installer',
+  )
+  const vswherePath = path.win32.resolve(vsInstallerPath, vswhere)
+  console.log(`vswhere: ${vswherePath}`)
+  return vswherePath
 }
 
 function findVSInstallDir(inputs) {
-    const vswherePath = findVSWhere(inputs)
+  const vswherePath = findVSWhere(inputs)
 
-    const requiresArg = inputs.components
-        .map(comp => ['-requires', comp])
-        .reduce((arr, pair) => arr.concat(pair), [])
+  const requiresArg = inputs.components
+    .map(comp => ['-requires', comp])
+    .reduce((arr, pair) => arr.concat(pair), [])
 
-    const vswhereArgs = [
-        '-nologo',
-        '-latest',
-        '-products', '*',
-        '-property', 'installationPath',
-    ].concat(requiresArg)
+  const vswhereArgs = [
+    '-nologo',
+    '-latest',
+    '-products',
+    '*',
+    '-property',
+    'installationPath',
+  ].concat(requiresArg)
 
-    console.log(`$ ${vswherePath} ${vswhereArgs.join(' ')}`)
+  console.log(`$ ${vswherePath} ${vswhereArgs.join(' ')}`)
 
-    const vswhereResult = spawn(vswherePath, vswhereArgs, { encoding: 'utf8' })
-    if (vswhereResult.error) throw vswhereResult.error
+  const vswhereResult = spawn(vswherePath, vswhereArgs, { encoding: 'utf8' })
+  if (vswhereResult.error) throw vswhereResult.error
 
-    if (inputs.verbose) {
-        const args = [
-            '-nologo',
-            '-latest',
-            '-products', '*',
-        ].concat(requiresArg)
-        const details = spawn(vswherePath, args, { encoding: 'utf8' })
-        console.log(details.output.join(''))
-    }
+  if (inputs.verbose) {
+    const args = ['-nologo', '-latest', '-products', '*'].concat(requiresArg)
+    const details = spawn(vswherePath, args, { encoding: 'utf8' })
+    console.log(details.output.join(''))
+  }
 
-    const installPathList = vswhereResult.output.filter(s => !!s).map(s => s.trim())
-    if (installPathList.length == 0) throw new Error('Could not find compatible VS installation')
+  const installPathList = vswhereResult.output
+    .filter(s => !!s)
+    .map(s => s.trim())
+  if (installPathList.length == 0)
+    throw new Error('Could not find compatible VS installation')
 
-    const installPath = installPathList[installPathList.length - 1]
-    console.log(`install: ${installPath}`)
-    return installPath
+  const installPath = installPathList[installPathList.length - 1]
+  console.log(`install: ${installPath}`)
+  return installPath
 }
 
 function getVSDevCmdArgs(inputs) {
-    // Default to the native processor as the host architecture
-    // vsdevcmd accepts both amd64 and x64
-    const hostArch = inputs.host_arch || index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+  // Default to the native processor as the host architecture
+  // vsdevcmd accepts both amd64 and x64
+  const hostArch =
+    inputs.host_arch || index_process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
 
-    // Default to the host architecture as the target architecture
-    const arch = inputs.arch || hostArch
+  // Default to the host architecture as the target architecture
+  const arch = inputs.arch || hostArch
 
-    const args = [
-        `-host_arch=${hostArch}`,
-        `-arch=${arch}`
-    ]
+  const args = [`-host_arch=${hostArch}`, `-arch=${arch}`]
 
-    if (inputs.toolsetVersion)
-        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
-    if (inputs.winsdk)
-        args.push(`-winsdk=${winsdk}`)
+  if (inputs.toolsetVersion)
+    vsDevCmdArgs.push(`-vcvars_ver=${inputs.toolsetVersion}`)
+  if (inputs.winsdk) args.push(`-winsdk=${inputs.winsdk}`)
 
-    return args
+  return args
 }
 
 try {
-    // this job has nothing to do on non-Windows platforms
-    if (index_process.platform != 'win32') {
-        index_process.exit(0)
-    }
+  // this job has nothing to do on non-Windows platforms
+  if (index_process.platform != 'win32') {
+    index_process.exit(0)
+  }
 
-    var inputs = getInputs()
+  var inputs = getInputs()
 
-    const installPath = findVSInstallDir(inputs)
-    core.setOutput('install_path', installPath)
+  const installPath = findVSInstallDir(inputs)
+  core.setOutput('install_path', installPath)
 
-    const vsDevCmdPath = path.win32.join(installPath, 'Common7', 'Tools', 'vsdevcmd.bat')
-    console.log(`vsdevcmd: ${vsDevCmdPath}`)
+  const vsDevCmdPath = path.win32.join(
+    installPath,
+    'Common7',
+    'Tools',
+    'vsdevcmd.bat',
+  )
+  console.log(`vsdevcmd: ${vsDevCmdPath}`)
 
-    const vsDevCmdArgs = getVSDevCmdArgs(inputs)
-    const cmdArgs = ['/q', '/k', vsDevCmdPath, ...vsDevCmdArgs, '&&', 'set']
-    console.log(`$ cmd ${cmdArgs.join(' ')}`)
+  const vsDevCmdArgs = getVSDevCmdArgs(inputs)
+  const cmdArgs = ['/q', '/k', vsDevCmdPath, ...vsDevCmdArgs, '&&', 'set']
+  console.log(`$ cmd ${cmdArgs.join(' ')}`)
 
-    const cmdResult = spawn('cmd', cmdArgs, { encoding: 'utf8' })
-    if (cmdResult.error) throw cmdResult.error
+  const cmdResult = spawn('cmd', cmdArgs, { encoding: 'utf8' })
+  if (cmdResult.error) throw cmdResult.error
 
-    const cmdOutput = cmdResult.output
-        .filter(s => !!s)
-        .map(s => s.split('\n'))
-        .reduce((arr, sub) => arr.concat(sub), [])
-        .filter(s => !!s)
-        .map(s => s.trim())
+  const cmdOutput = cmdResult.output
+    .filter(s => !!s)
+    .map(s => s.split('\n'))
+    .reduce((arr, sub) => arr.concat(sub), [])
+    .filter(s => !!s)
+    .map(s => s.trim())
 
-    const completeEnv = cmdOutput
-        .filter(s => s.indexOf('=') != -1)
-        .map(s => s.split('=', 2))
-    const newEnvVars = completeEnv
-        .filter(([key, _]) => !index_process.env[key])
-    const newPath = completeEnv
-        .filter(([key, _]) => key == 'Path')
-        .map(([_, value]) => value)
-        .join(';');
+  const completeEnv = cmdOutput
+    .filter(s => s.indexOf('=') != -1)
+    .map(s => s.split('=', 2))
+  const newEnvVars = completeEnv.filter(([key, _]) => !index_process.env[key])
+  const newPath = completeEnv
+    .filter(([key, _]) => key == 'Path')
+    .map(([_, value]) => value)
+    .join(';')
 
-    for (const [key, value] of newEnvVars) {
-        core.exportVariable(key, value)
-    }
-    core.exportVariable('Path', newPath);
+  for (const [key, value] of newEnvVars) {
+    core.exportVariable(key, value)
+  }
+  core.exportVariable('Path', newPath)
 
-    console.log('environment updated')
+  console.log('environment updated')
 } catch (error) {
-    core.setFailed(error.message);
+  core.setFailed(error.message)
 }
 
 module.exports = __webpack_exports__;
