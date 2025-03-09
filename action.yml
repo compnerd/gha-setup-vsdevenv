@@ -5,7 +5,7 @@ branding:
   color: 'purple'
 inputs:
   vswhere:
-    description: 'Name or path to vswhere.exr'
+    description: 'Name or path to vswhere.exe'
     default: 'vswhere.exe'
   arch:
     description: "Determines the 'arch' argument to vcvarsall (x86, amd64/x64, arm, arm64, or arm64ec). Defaults to the value of host_arch."
