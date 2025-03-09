@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm build
+
+      - name: Package
+        run: |
+          cp -r action.yml dist/
+          cp -r node_modules dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gha-setup-vsdevenv
+          path: dist
+
+      - run: |
+          git config --global user.nme 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -f dist
+          git commit -m 'dist: regenerate @ ${{ github.ref }}'
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
