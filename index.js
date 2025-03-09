@@ -99,20 +99,10 @@ function findVSInstallDir(settings) {
 }
 
 function getVSDevCmdArgs(settings) {
-  // Default to the native processor as the host architecture
-  // vsdevcmd accepts both amd64 and x64
-  const hostArch =
-    settings.host_arch || process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
-
-  // Default to the host architecture as the target architecture
-  const arch = settings.arch || hostArch
-
-  const args = [`-host_arch=${hostArch}`, `-arch=${arch}`]
-
+  const args = [`-host_arch=${settings.host_arch}`, `-arch=${settings.arch}`]
   if (settings.toolset_version)
     args.push(`-vcvars_ver=${settings.toolset_version}`)
   if (settings.winsdk) args.push(`-winsdk=${settings.winsdk}`)
-
   return args
 }
 
