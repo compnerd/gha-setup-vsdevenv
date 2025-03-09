@@ -17,15 +17,23 @@ function getInputs() {
     .getInput('components')
     .split(';')
     .filter(s => s.length != 0)
+
   if (!toolsetVersion) {
     // Include the latest target architecture compiler toolset by default
-    if (arch === 'arm64')
+    switch (arch) {
+    case 'arm64':
       components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
-    else if (arch === 'arm64ec')
+      break
+    case 'arm64ec':
       components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
-    else if (arch == 'arm')
+      break
+    case 'arm':
       components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
-    else components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+      break
+    default:
+      components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+      break
+    }
   }
 
   return {
