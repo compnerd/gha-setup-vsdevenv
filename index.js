@@ -3,8 +3,8 @@ const process = require('process')
 const path = require('path')
 const spawn = require('child_process').spawnSync
 
-/// Gets the inputs to this action, with default values filled in.
-function getInputs() {
+/// Gets the settings for this action, with default values filled in.
+function getSettings() {
   // Default to the native processor as the host architecture
   // vsdevcmd accepts both amd64 and x64
   const hostArch =
@@ -21,18 +21,18 @@ function getInputs() {
   if (!toolsetVersion) {
     // Include the latest target architecture compiler toolset by default
     switch (arch) {
-    case 'arm64':
-      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
-      break
-    case 'arm64ec':
-      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
-      break
-    case 'arm':
-      components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
-      break
-    default:
-      components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
-      break
+      case 'arm64':
+        components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64')
+        break
+      case 'arm64ec':
+        components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM64EC')
+        break
+      case 'arm':
+        components.push('Microsoft.VisualStudio.Component.VC.Tools.ARM')
+        break
+      default:
+        components.push('Microsoft.VisualStudio.Component.VC.Tools.x86.x64')
+        break
     }
   }
 
@@ -48,8 +48,8 @@ function getInputs() {
   }
 }
 
-function findVSWhere(inputs) {
-  const vswhere = inputs.vswhere || 'vswhere.exe'
+function findVSWhere(settings) {
+  const vswhere = settings.vswhere || 'vswhere.exe'
   const vsInstallerPath = path.win32.join(
     process.env['ProgramFiles(x86)'],
     'Microsoft Visual Studio',
@@ -60,10 +60,10 @@ function findVSWhere(inputs) {
   return vswherePath
 }
 
-function findVSInstallDir(inputs) {
-  const vswherePath = findVSWhere(inputs)
+function findVSInstallDir(settings) {
+  const vswherePath = findVSWhere(settings)
 
-  const requiresArg = inputs.components
+  const requiresArg = settings.components
     .map(comp => ['-requires', comp])
     .reduce((arr, pair) => arr.concat(pair), [])
 
@@ -81,7 +81,7 @@ function findVSInstallDir(inputs) {
   const vswhereResult = spawn(vswherePath, vswhereArgs, { encoding: 'utf8' })
   if (vswhereResult.error) throw vswhereResult.error
 
-  if (inputs.verbose) {
+  if (settings.verbose) {
     const args = ['-nologo', '-latest', '-products', '*'].concat(requiresArg)
     const details = spawn(vswherePath, args, { encoding: 'utf8' })
     console.log(details.output.join(''))
@@ -98,19 +98,20 @@ function findVSInstallDir(inputs) {
   return installPath
 }
 
-function getVSDevCmdArgs(inputs) {
+function getVSDevCmdArgs(settings) {
   // Default to the native processor as the host architecture
   // vsdevcmd accepts both amd64 and x64
   const hostArch =
-    inputs.host_arch || process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
+    settings.host_arch || process.env['PROCESSOR_ARCHITECTURE'].toLowerCase() // amd64, x86 or arm64
 
   // Default to the host architecture as the target architecture
-  const arch = inputs.arch || hostArch
+  const arch = settings.arch || hostArch
 
   const args = [`-host_arch=${hostArch}`, `-arch=${arch}`]
 
-  if (inputs.toolset_version) args.push(`-vcvars_ver=${inputs.toolset_version}`)
-  if (inputs.winsdk) args.push(`-winsdk=${inputs.winsdk}`)
+  if (settings.toolset_version)
+    args.push(`-vcvars_ver=${settings.toolset_version}`)
+  if (settings.winsdk) args.push(`-winsdk=${settings.winsdk}`)
 
   return args
 }
@@ -121,9 +122,9 @@ try {
     process.exit(0)
   }
 
-  var inputs = getInputs()
+  var settings = getSettings()
 
-  const installPath = findVSInstallDir(inputs)
+  const installPath = findVSInstallDir(settings)
   core.setOutput('install_path', installPath)
 
   const vsDevCmdPath = path.win32.join(
@@ -134,7 +135,7 @@ try {
   )
   console.log(`vsdevcmd: ${vsDevCmdPath}`)
 
-  const vsDevCmdArgs = getVSDevCmdArgs(inputs)
+  const vsDevCmdArgs = getVSDevCmdArgs(settings)
   const cmdArgs = ['/q', '/k', vsDevCmdPath, ...vsDevCmdArgs, '&&', 'set']
   console.log(`$ cmd ${cmdArgs.join(' ')}`)
 
