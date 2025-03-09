@@ -11,7 +11,8 @@
     "dev": "npm run build && ncc run index.js"
   },
   "dependencies": {
-    "@actions/core": "^1.10.0"
+    "@actions/core": "^1.10.0",
+    "prettier": "^3.5.3"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3"
