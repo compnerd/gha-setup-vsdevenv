@@ -95,9 +95,9 @@ function getVSDevCmdArgs(inputs) {
     ]
 
     if (inputs.toolsetVersion)
-        vsDevCmdArgs.push(`-vcvars_ver=${toolsetVersion}`)
+        vsDevCmdArgs.push(`-vcvars_ver=${inputs.toolsetVersion}`)
     if (inputs.winsdk)
-        args.push(`-winsdk=${winsdk}`)
+        args.push(`-winsdk=${inputs.winsdk}`)
 
     return args
 }
