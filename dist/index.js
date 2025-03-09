@@ -2934,8 +2934,7 @@ function getVSDevCmdArgs(inputs) {
 
   const args = [`-host_arch=${hostArch}`, `-arch=${arch}`]
 
-  if (inputs.toolset_version)
-    vsDevCmdArgs.push(`-vcvars_ver=${inputs.toolset_version}`)
+  if (inputs.toolset_version) args.push(`-vcvars_ver=${inputs.toolset_version}`)
   if (inputs.winsdk) args.push(`-winsdk=${inputs.winsdk}`)
 
   return args
