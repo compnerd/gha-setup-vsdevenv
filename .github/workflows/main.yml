@@ -19,6 +19,8 @@ jobs:
       - uses: actions/checkout@master
       - uses: actions/setup-node@v1
       - uses: ./
+        with:
+          winsdk: 10.0.22621.0
       - run: 'cl /EHsc /Fe:test.exe tests\\test.cpp && .\\test.exe'
         if: runner.os == 'Windows'
 
