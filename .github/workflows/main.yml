@@ -24,5 +24,6 @@ jobs:
         with:
           winsdk: 10.0.22621.0
       - run: 'cl /EHsc /Fe:test.exe tests\\test.cpp && .\\test.exe'
+        shell: cmd
         if: runner.os == 'Windows'
 
