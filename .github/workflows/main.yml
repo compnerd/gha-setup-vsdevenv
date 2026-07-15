@@ -16,8 +16,10 @@ jobs:
         image: [ 'windows-latest', 'ubuntu-latest' ]
 
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
       - uses: ./
         with:
           winsdk: 10.0.22621.0
